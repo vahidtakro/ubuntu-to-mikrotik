@@ -1,9 +1,16 @@
 #!/bin/bash
 
-# Configuration
+# Configuration Paths
+CONFIG_FILE="/etc/mikrotik-config.conf"
 IMAGE_PATH="/opt/mikrotik/chr-7.15.img"
-RAM="2G"
-CORES="2"
+
+# Load saved configurations or fallback to defaults
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+else
+    RAM="512M"
+    CORES="1"
+fi
 
 show_help() {
     echo "Usage: sudo mikrotik-manage [command]"
@@ -13,6 +20,7 @@ show_help() {
     echo "  stop      Stop the MikroTik server"
     echo "  restart   Restart the MikroTik server"
     echo "  status    Check if MikroTik is running"
+    echo "  config    Change RAM and CPU settings"
     echo "  help      Show this help menu"
 }
 
@@ -20,18 +28,52 @@ is_running() {
     pgrep -f "qemu-system-x86_64.*$IMAGE_PATH" > /dev/null
 }
 
+configure_settings() {
+    echo "=== MikroTik Hardware Configuration ==="
+    
+    # Get RAM
+    read -p "Enter RAM allocation (e.g., 256M, 512M, 1G, 2G) [Current: $RAM]: " input_ram
+    if [ ! -z "$input_ram" ]; then
+        RAM=$input_ram
+    fi
+
+    # Get CPU Cores
+    read -p "Enter number of CPU Cores (e.g., 1, 2, 4) [Current: $CORES]: " input_cores
+    if [ ! -z "$input_cores" ]; then
+        CORES=$input_cores
+    fi
+
+    # Save to file
+    sudo bash -c "cat << EOF > $CONFIG_FILE
+RAM=\"$RAM\"
+CORES=\"$CORES\"
+EOF"
+
+    echo "✅ Settings saved! (RAM: $RAM, Cores: $CORES)"
+    if is_running; then
+        echo "⚠️ Note: Please run 'sudo mikrotik-manage restart' to apply changes."
+    fi
+}
+
 case "$1" in
     start)
         if is_running; then
             echo "⚠️ MikroTik is already running!"
         else
-            echo "🚀 Starting MikroTik CHR..."
+            echo "🚀 Starting MikroTik CHR (RAM: $RAM, Cores: $CORES)..."
             sudo qemu-system-x86_64 -m $RAM -smp $CORES -machine accel=tcg \
               -drive file=$IMAGE_PATH,if=virtio,format=raw \
               -netdev user,id=n1,hostfwd=tcp::8291-:8291,hostfwd=tcp::2222-:22 \
               -device virtio-net-pci,netdev=n1 \
               -display none -daemonize
-            echo "✅ Started successfully."
+            
+            # Brief pause to verify it didn't immediate crash (like a memory limit crash)
+            sleep 1
+            if is_running; then
+                echo "✅ Started successfully."
+            else
+                echo "❌ Failed to start. Check if you assigned too much RAM ($RAM)."
+            fi
         fi
         ;;
     stop)
@@ -52,11 +94,16 @@ case "$1" in
         if is_running; then
             PID=$(pgrep -f "qemu-system-x86_64.*$IMAGE_PATH")
             echo "🟢 MikroTik is RUNNING (PID: $PID)"
+            echo "   Allocated RAM: $RAM"
+            echo "   Allocated Cores: $CORES"
             echo "   WinBox Port: 8291"
             echo "   SSH Port: 2222"
         else
             echo "🔴 MikroTik is STOPPED"
         fi
+        ;;
+    config)
+        configure_settings
         ;;
     *)
         show_help
