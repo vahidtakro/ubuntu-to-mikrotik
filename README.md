@@ -40,6 +40,23 @@ curl -sSL https://raw.githubusercontent.com/vahidtakro/ubuntu-to-mikrotik/main/i
 ps aux | grep qemu
 ```
 
+### Manage Mikrotik server:
+```bash
+sudo mikrotik-manage
+Commands:
+  start     Start the MikroTik server
+  stop      Stop the MikroTik server
+  restart   Restart the MikroTik server
+  status    Check if MikroTik is running
+  config    Change RAM and CPU settings
+  help      Show this help menu
+```
+
+### Change RAM and CPU Settings:
+```bash
+sudo mikrotik-manage config
+```
+
 ---
 
 ### Stop the MikroTik server:
