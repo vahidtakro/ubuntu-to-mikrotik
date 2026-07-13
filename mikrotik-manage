@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Configuration
+IMAGE_PATH="/opt/mikrotik/chr-7.15.img"
+RAM="2G"
+CORES="2"
+
+show_help() {
+    echo "Usage: sudo mikrotik-manage [command]"
+    echo ""
+    echo "Commands:"
+    echo "  start     Start the MikroTik server"
+    echo "  stop      Stop the MikroTik server"
+    echo "  restart   Restart the MikroTik server"
+    echo "  status    Check if MikroTik is running"
+    echo "  help      Show this help menu"
+}
+
+is_running() {
+    pgrep -f "qemu-system-x86_64.*$IMAGE_PATH" > /dev/null
+}
+
+case "$1" in
+    start)
+        if is_running; then
+            echo "⚠️ MikroTik is already running!"
+        else
+            echo "🚀 Starting MikroTik CHR..."
+            sudo qemu-system-x86_64 -m $RAM -smp $CORES -machine accel=tcg \
+              -drive file=$IMAGE_PATH,if=virtio,format=raw \
+              -netdev user,id=n1,hostfwd=tcp::8291-:8291,hostfwd=tcp::2222-:22 \
+              -device virtio-net-pci,netdev=n1 \
+              -display none -daemonize
+            echo "✅ Started successfully."
+        fi
+        ;;
+    stop)
+        if is_running; then
+            echo "🛑 Stopping MikroTik CHR..."
+            sudo kill $(pgrep -f "qemu-system-x86_64.*$IMAGE_PATH")
+            echo "✅ Stopped successfully."
+        else
+            echo "⚠️ MikroTik is not running."
+        fi
+        ;;
+    restart)
+        $0 stop
+        sleep 2
+        $0 start
+        ;;
+    status)
+        if is_running; then
+            PID=$(pgrep -f "qemu-system-x86_64.*$IMAGE_PATH")
+            echo "🟢 MikroTik is RUNNING (PID: $PID)"
+            echo "   WinBox Port: 8291"
+            echo "   SSH Port: 2222"
+        else
+            echo "🔴 MikroTik is STOPPED"
+        fi
+        ;;
+    *)
+        show_help
+        ;;
+esac
