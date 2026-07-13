@@ -64,6 +64,24 @@ sudo mikrotik-manage config
 sudo kill $(pgrep qemu-system-x86)
 ```
 
+### 🔄 Update Management Tool
+
+If this repository receives updates or new features, you can update your localized management command without losing any of your existing RouterOS data or files:
+
+```bash
+sudo mikrotik-manage update
+```
+
+## 🗑️ Uninstallation
+
+If you ever need to completely remove MikroTik CHR and all its data from your server without affecting your Ubuntu system, simply run:
+
+```bash
+sudo mikrotik-manage uninstall
+```
+
+
+
 ---
 
 ### ⭐ Support & Contributions

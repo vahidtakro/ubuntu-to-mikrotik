@@ -3,6 +3,7 @@
 # Configuration Paths
 CONFIG_FILE="/etc/mikrotik-config.conf"
 IMAGE_PATH="/opt/mikrotik/chr-7.15.img"
+REPO_URL="https://raw.githubusercontent.com/vahidtakro/ubuntu-to-mikrotik/main/mikrotik-manage"
 
 # Load saved configurations or fallback to defaults
 if [ -f "$CONFIG_FILE" ]; then
@@ -12,16 +13,39 @@ else
     CORES="1"
 fi
 
+# Helper function to grab the server's public IP address dynamically
+get_server_ip() {
+    local ip=$(curl -s https://api.ipify.org || curl -s https://ifconfig.me || echo "YOUR_SERVER_IP")
+    echo "$ip"
+}
+
+# Helper function to display connection credentials
+show_credentials() {
+    local ip=$(get_server_ip)
+    echo "====================================================="
+    echo "🌐 MIKROTIK WINBOX CONNECTION DETAILS"
+    echo "====================================================="
+    echo "  👉 Connect To:  $ip"
+    echo "  👉 Login/User:   admin"
+    echo "  👉 Password:     (Leave completely BLANK/EMPTY)"
+    echo "  👉 WinBox Port:  8291"
+    echo "  👉 SSH Port:     2222"
+    echo "====================================================="
+    echo "⚠️  Important: Change the admin password immediately upon login!"
+}
+
 show_help() {
     echo "Usage: sudo mikrotik-manage [command]"
     echo ""
     echo "Commands:"
-    echo "  start     Start the MikroTik server"
-    echo "  stop      Stop the MikroTik server"
-    echo "  restart   Restart the MikroTik server"
-    echo "  status    Check if MikroTik is running"
-    echo "  config    Change RAM and CPU settings"
-    echo "  help      Show this help menu"
+    echo "  start       Start the MikroTik server"
+    echo "  stop        Stop the MikroTik server"
+    echo "  restart     Restart the MikroTik server"
+    echo "  status      Check if MikroTik is running and get credentials"
+    echo "  config      Change RAM and CPU settings"
+    echo "  update      Update this management script to the latest GitHub version"
+    echo "  uninstall   Completely remove MikroTik from your server"
+    echo "  help        Show this help menu"
 }
 
 is_running() {
@@ -55,6 +79,50 @@ EOF"
     fi
 }
 
+update_script() {
+    echo "🔄 Checking GitHub for updates..."
+    
+    # Download the script to a temporary location to make sure it exists
+    local temp_file=$(mktemp)
+    if curl -sSL "$REPO_URL" -o "$temp_file"; then
+        # Check if the downloaded file is actually a script and not a 404 page
+        if grep -q "#!/bin/bash" "$temp_file"; then
+            sudo mv "$temp_file" /usr/local/bin/mikrotik-manage
+            sudo chmod +x /usr/local/bin/mikrotik-manage
+            echo "✅ Success! mikrotik-manage has been updated to the latest version."
+        else
+            echo "❌ Error: Downloaded file is invalid. Check repository URL."
+            rm -f "$temp_file"
+        fi
+    else
+        echo "❌ Error: Failed to reach GitHub to download the update."
+        rm -f "$temp_file"
+    fi
+}
+
+uninstall_app() {
+    echo "⚠️  WARNING: This will stop MikroTik and completely delete all its virtual disks, configurations, and commands."
+    read -p "Are you absolutely sure you want to proceed? (y/N): " confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo "🛑 Stopping MikroTik if running..."
+        if is_running; then
+            sudo kill $(pgrep -f "qemu-system-x86_64.*$IMAGE_PATH")
+            sleep 1
+        fi
+        
+        echo "🧹 Removing installation directories and configs..."
+        sudo rm -rf /opt/mikrotik
+        sudo rm -f /etc/mikrotik-config.conf
+        
+        echo "🗑️ Removing command shortcut..."
+        sudo rm -f /usr/local/bin/mikrotik-manage
+        
+        echo "✅ MikroTik has been completely removed from your server!"
+    else
+        echo "❌ Uninstallation canceled."
+    fi
+}
+
 case "$1" in
     start)
         if is_running; then
@@ -67,10 +135,10 @@ case "$1" in
               -device virtio-net-pci,netdev=n1 \
               -display none -daemonize
             
-            # Brief pause to verify it didn't immediate crash (like a memory limit crash)
             sleep 1
             if is_running; then
                 echo "✅ Started successfully."
+                show_credentials
             else
                 echo "❌ Failed to start. Check if you assigned too much RAM ($RAM)."
             fi
@@ -96,14 +164,20 @@ case "$1" in
             echo "🟢 MikroTik is RUNNING (PID: $PID)"
             echo "   Allocated RAM: $RAM"
             echo "   Allocated Cores: $CORES"
-            echo "   WinBox Port: 8291"
-            echo "   SSH Port: 2222"
+            echo ""
+            show_credentials
         else
             echo "🔴 MikroTik is STOPPED"
         fi
         ;;
     config)
         configure_settings
+        ;;
+    update)
+        update_script
+        ;;
+    uninstall)
+        uninstall_app
         ;;
     *)
         show_help
