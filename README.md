@@ -19,7 +19,7 @@ A lightweight, non-destructive script to install and run **MikroTik RouterOS (CH
 Run the following command on your Ubuntu server to download and execute the setup automatically:
 
 ```bash
-curl -sSL [https://raw.githubusercontent.com/vahidtakro/ubuntu-to-mikrotik/main/install.sh](https://raw.githubusercontent.com/vahidtakro/ubuntu-to-mikrotik/main/install.sh) | bash
+curl -sSL https://raw.githubusercontent.com/vahidtakro/ubuntu-to-mikrotik/main/install.sh | bash
 ```
 
 ---
@@ -51,11 +51,3 @@ sudo kill $(pgrep qemu-system-x86)
 
 ### ⭐ Support & Contributions
 If this script saved your server from being accidentally wiped, please give it a Star! Feel free to open issues or submit pull requests to improve the script.
-
----
-
-### 👑 Secret Tips to Become Popular on GitHub
-
-1. **Pick a Catchy Repo Name:** Name it something descriptive yet simple like `ubuntu-safe-mikrotik` or `mikrotik-on-ubuntu-safe`.
-2. **Add Topics/Tags:** On the right side of your GitHub repo, click the gear icon next to "About" and add tags like: `mikrotik`, `routeros`, `ubuntu-server`, `kvm`, `qemu`, `winbox`, `chr`. This helps people find your project via GitHub search.
-3. **Promote It Dynamically:** Once it's live, go to the **MikroTik Official Forums**, **Reddit (`r/mikrotik`)**, and hosting communities (like **LowEndTalk**). Write a post explaining how you created a safe way to run CHR on a VPS without losing data. People will start flooding your repo to give it stars. 
